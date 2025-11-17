@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <title>🐶 妙麗歲數計算機</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+        "Noto Sans TC", sans-serif;
+    }
+
+    body {
+      margin: 0;
+      background: #f5f5f7;
+      display: flex;
+      justify-content: center;
+      padding: 40px 16px;
+    }
+
+    .card {
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 24px 24px 28px;
+      max-width: 420px;
+      width: 100%;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
+    }
+
+    .card h1 {
+      font-size: 22px;
+      margin: 0 0 20px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    label {
+      font-size: 14px;
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    input[type="date"],
+    select {
+      width: 100%;
+      padding: 8px 10px;
+      font-size: 14px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    input[type="date"]:focus,
+    select:focus {
+      border-color: #2563eb;
+      box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+    }
+
+    .field {
+      margin-bottom: 16px;
+    }
+
+    button {
+      margin-top: 4px;
+      padding: 8px 20px;
+      border-radius: 6px;
+      border: 1px solid #2563eb;
+      background: #2563eb;
+      color: #fff;
+      font-size: 14px;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.05s, box-shadow 0.15s;
+    }
+
+    button:hover {
+      background: #1d4ed8;
+      box-shadow: 0 4px 10px rgba(37, 99, 235, 0.35);
+    }
+
+    button:active {
+      transform: translateY(1px);
+      box-shadow: none;
+    }
+
+    .result-box {
+      margin-top: 18px;
+      padding: 14px 16px;
+      border-radius: 8px;
+      background: #f3f4f6;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .result-box strong {
+      font-weight: 700;
+    }
+
+    .hint {
+      margin-top: 8px;
+      font-size: 12px;
+      color: #6b7280;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>🐶 妙麗歲數計算機</h1>
+
+    <div class="field">
+      <label for="birthDate">狗狗的出生日期：</label>
+      <input id="birthDate" type="date" />
+    </div>
+
+    <div class="field">
+      <label for="size">狗狗體型：</label>
+      <select id="size">
+        <option value="small">小型犬</option>
+        <option value="medium">中型犬</option>
+        <option value="large">大型犬</option>
+      </select>
+    </div>
+
+    <button id="calcBtn">開始計算</button>
+
+    <div id="result" class="result-box" style="display:none;"></div>
+
+    <div class="hint">
+      ※ 人類年齡換算依照美國犬業俱樂部提供的犬齡對照表，<br />
+      以線性插值估算出小數點後的年齡。
+    </div>
+  </div>
+
+  <script>
+    // 犬年齡對照表（單位：人類歲數）
+    // 年齡為整歲狗年，小數會在程式中做插值計算
+    const dogAgeTable = [
+      { age: 1, small: 15, medium: 15, large: 15 },
+      { age: 2, small: 24, medium: 24, large: 24 },
+      { age: 3, small: 28, medium: 28, large: 28 },
+      { age: 4, small: 32, medium: 32, large: 32 },
+      { age: 5, small: 36, medium: 36, large: 36 },
+      { age: 6, small: 40, medium: 42, large: 45 },
+      { age: 7, small: 44, medium: 47, large: 50 },
+      { age: 8, small: 48, medium: 51, large: 55 },
+      { age: 9, small: 52, medium: 56, large: 61 },
+      { age: 10, small: 56, medium: 60, large: 66 },
+      { age: 11, small: 60, medium: 65, large: 72 },
+      { age: 12, small: 64, medium: 69, large: 77 },
+      { age: 13, small: 68, medium: 74, large: 82 },
+      { age: 14, small: 72, medium: 78, large: 88 },
+      { age: 15, small: 76, medium: 83, large: 93 },
+      { age: 16, small: 80, medium: 87, large: 120 }
+    ];
+
+    const birthInput = document.getElementById("birthDate");
+    const sizeSelect = document.getElementById("size");
+    const resultBox = document.getElementById("result");
+    const calcBtn = document.getElementById("calcBtn");
+
+    // 按鈕點擊事件
+    calcBtn.addEventListener("click", function () {
+      const birthValue = birthInput.value;
+      if (!birthValue) {
+        alert("請先選擇狗狗的出生日期！");
+        return;
+      }
+
+      const birthDate = new Date(birthValue);
+      const now = new Date();
+
+      if (birthDate > now) {
+        alert("出生日期不能晚於今天哦！");
+        return;
+      }
+
+      const dogYears = getDogAgeInYears(birthDate, now);
+      const sizeKey = sizeSelect.value; // small / medium / large
+      const humanYears = convertToHumanYears(dogYears, sizeKey);
+
+      const dogYearsDisplay = dogYears.toFixed(1);
+      const humanYearsDisplay = humanYears.toFixed(1);
+
+      resultBox.style.display = "block";
+      resultBox.innerHTML =
+        `狗狗現在大約 <strong>${dogYearsDisplay}</strong> 歲狗狗年齡，` +
+        `換算成人類年齡大約是 <strong>${humanYearsDisplay}</strong> 歲。`;
+    });
+
+    // 計算狗狗實際年齡（狗年）
+    function getDogAgeInYears(birthDate, now) {
+      const diffMs = now.getTime() - birthDate.getTime();
+      const years = diffMs / (1000 * 60 * 60 * 24 * 365.25); // 以 365.25 天做換算
+      return years;
+    }
+
+    // 依照犬年齡對照表，將狗年換成人類年齡
+    function convertToHumanYears(dogYears, sizeKey) {
+      const table = dogAgeTable;
+
+      // 小於 1 歲：0 ~ 1 歲之間做比例
+      if (dogYears <= table[0].age) {
+        const ratio = dogYears / table[0].age;
+        return ratio * table[0][sizeKey];
+      }
+
+      const maxAge = table[table.length - 1].age;
+
+      // 大於最大表格年齡時，這裡簡化為「以 16 歲的數值為上限」
+      if (dogYears >= maxAge) {
+        return table[table.length - 1][sizeKey];
+      }
+
+      // 1 ~ 16 歲之間：找出前後兩個整歲區間做線性插值
+      for (let i = 1; i < table.length; i++) {
+        const lower = table[i - 1];
+        const upper = table[i];
+
+        if (dogYears <= upper.age) {
+          const ratio =
+            (dogYears - lower.age) / (upper.age - lower.age); // 0~1 之間
+          const lowerHuman = lower[sizeKey];
+          const upperHuman = upper[sizeKey];
+          return lowerHuman + ratio * (upperHuman - lowerHuman);
+        }
+      }
+
+      // 理論上不會走到這裡，保底回傳最大值
+      return table[table.length - 1][sizeKey];
+    }
+  </script>
+</body>
+</html>
